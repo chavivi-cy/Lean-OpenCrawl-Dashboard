@@ -1,90 +1,62 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI  # 使用通用 OpenAI 协议连接 OpenRouter
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
-# --- 页面专业设置 ---
-st.set_page_config(page_title="LEAN + OPEN CRAWL | 智能投研系统", layout="wide", initial_sidebar_state="expanded")
+# 页面基础设置
+st.set_page_config(page_title="LEAN + OPEN CRAWL | 智能投研系统", layout="wide")
+st.title("📈 智能投资演示看板 (OpenRouter 版)")
 
-# 自定义 CSS 让界面更有科技感
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; }
-    .stMetric { background-color: #161b22; border-radius: 10px; padding: 15px; border: 1px solid #30363d; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 侧边栏：核心配置 ---
+# 侧边栏：这里填入你的新钥匙
 with st.sidebar:
-    st.title("🛡️ 系统控制台")
-    api_key = st.text_input("Gemini API Key (备用)", type="password", help="若不填，系统将进入智能模拟演示模式")
-    asset_type = st.selectbox("核心监控标的", ["ETH/USDT", "纳斯达克100", "黄金 (XAU/USD)", "Prop Firm 挑战账户"])
-    st.divider()
-    st.info(f"身份验证: 苏先生 (顾问模式)\n更新时间: {datetime.now().strftime('%Y-%m-%d')}")
-
-# --- 主界面：标题与核心指标 ---
-st.title("📊 LEAN + OPEN CRAWL 深度投研看板")
-st.caption("融合量化回测引擎与全网舆情抓取，提供多维度决策支持。")
-
-m1, m2, m3, m4 = st.columns(4)
-with m1: st.metric("RSI (14)", "68.2", "超买预警")
-with m2: st.metric("波动率 (VIX)", "14.5", "-2.1%", delta_color="inverse")
-with m3: st.metric("LEAN 策略得分", "88/100", "+5")
-with m4: st.metric("舆情热度", "🔥 极高", "12k 讨论")
-
-# --- 中间层：可视化分析图表 ---
-st.markdown("### 📈 实时行情与量化信号 (LEAN Engine)")
-tab1, tab2 = st.tabs(["价格走势图", "情绪热力图"])
-
-with tab1:
-    # 模拟一段价格数据
-    dates = pd.date_range(start='2026-01-01', periods=100)
-    prices = np.cumsum(np.random.randn(100) + 0.1) + 2600
+    st.header("🔑 系统授权")
+    # 这里就是填你那串 sk-or-v1-...301 的地方
+    or_api_key = st.text_input("输入 OpenRouter API Key", type="password")
     
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=dates, y=prices, mode='lines', name='Price', line=dict(color='#00d1ff', width=2)))
-    fig.update_layout(template="plotly_dark", margin=dict(l=20, r=20, t=20, b=20), height=400)
-    st.plotly_chart(fig, use_container_width=True)
+    st.divider()
+    model_option = st.selectbox("核心 AI 引擎", [
+        "google/gemini-2.0-flash-001", 
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o-mini"
+    ])
+    asset = st.selectbox("分析目标", ["ETH/USDT", "纳指100", "Prop Firm 账户"])
 
-with tab2:
-    st.write("正在从 **OPEN CRAWL** 抓取全球社交媒体、财报、新闻的情绪数据...")
-    st.progress(72, text="当前市场看涨情绪: 72%")
+# 数据展示区 (LEAN & Open Crawl)
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("LEAN 策略得分", "92/100", "+3")
+    st.write("✅ 技术面：均线多头，RSI 62")
+with col2:
+    st.metric("Open Crawl 情绪", "🔥 极高", "78%")
 
-# --- 底层：AI 策略生成 (双模逻辑) ---
-st.markdown("---")
-st.subheader("🧠 综合决策研报")
-
-if st.button("🚀 生成深度策略建议", use_container_width=True):
-    with st.spinner("正在融合多维数据，由 Gemini 提供 AI 支持..."):
-        success = False
-        # 尝试真实 API 调用
-        if api_key:
+# AI 策略生成逻辑
+if st.button("🚀 生成深度研报", use_container_width=True):
+    if not or_api_key:
+        st.warning("请在左侧填入你的 OpenRouter Key (sk-or-v1-...)")
+    else:
+        with st.spinner(f"正在通过 OpenRouter 调用 {model_option}..."):
             try:
-                genai.configure(api_key=api_key)
-                # 尝试目前最稳健的调用全称
-                model = genai.GenerativeModel('models/gemini-1.5-flash')
-                prompt = f"针对 {asset_type}，技术面RSI 68且均线向上，情绪面看涨72%，请给出30字以内的极简操作建议。"
-                response = model.generate_content(prompt)
-                st.success("✅ [实时 AI 模式] 策略已生成")
-                st.info(response.text)
-                success = True
-            except:
-                pass
-        
-        # 降级模拟模式 (演示核心)
-        if not success:
-            time_delay = 1.5
-            import time
-            time.sleep(time_delay)
-            st.warning("💡 [智能演示模式已激活] API 暂时受限，当前基于 LEAN 历史模型输出：")
-            
-            strategies = {
-                "ETH/USDT": "**建议持仓待涨**。目前 RSI 虽接近超买，但 Open Crawl 监测到 ETH 质押量持续上升，筹码锁定良好，建议止损上移至 $2550。",
-                "Prop Firm 挑战账户": "**风控优先**。当前回撤控制在 1.2%，符合 The5ers 规则。建议在美盘开盘前半小时降低 50% 仓位以应对非农波动。",
-                "default": "技术面处于强势扩张期，建议结合 LEAN 的动能因子进行右侧入场，目标位参考前高阻力区。"
-            }
-            st.write(strategies.get(asset_type, strategies["default"]))
+                # 关键步骤：指向 OpenRouter 的服务器地址
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=or_api_key,
+                )
+                
+                completion = client.chat.completions.create(
+                    extra_headers={
+                        "HTTP-Referer": "http://localhost:8501", 
+                        "X-Title": "Lean Dashboard",
+                    },
+                    model=model_option,
+                    messages=[
+                        {"role": "user", "content": f"请以资深交易员身份，结合RSI 62和看涨情绪，为 {asset} 提供150字策略建议。"}
+                    ],
+                )
+                st.success("✅ 分析完成！")
+                st.markdown("#### AI 建议全文：")
+                st.write(completion.choices[0].message.content)
+            except Exception as e:
+                st.error(f"调用失败，请检查 Key 或网络: {e}")
 
-st.caption("声明：本看板仅供演示，不构成任何投资建议。")
+st.caption("Powered by OpenRouter | 麦肯锡顾问模式")
