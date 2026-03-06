@@ -128,13 +128,12 @@ if df is not None:
                 st.markdown(f'<div class="news-box"><b>{item["title"]}</b><br><small><a href="{item["link"]}" target="_blank" style="color:#00d1ff;">[阅读原文]</a></small></div>', unsafe_allow_html=True)
     else: st.info("📡 正在全网扫描 2026 最新财经情报...")
 
-    # D. 双模型共识分析 (修复 BadRequest)
+    # D. 双模型共识分析 (精准修复版)
     st.divider()
-    if st.button("🚀 启动全球策略共识分析 (Gemini 3.0 x Claude 3.5)"):
+    if st.button("🚀 启动全球策略共识分析 (Cross-Model PK)"):
         if not or_key: st.error("请填入 OpenRouter Key")
         else:
             with st.spinner("正在进行深度交叉验证..."):
-                # 关键修复：加入 OpenRouter 必须的 headers
                 client = OpenAI(
                     base_url="https://openrouter.ai/api/v1", 
                     api_key=or_key,
@@ -143,7 +142,7 @@ if df is not None:
                         "X-Title": "LEAN Quantum Terminal"
                     }
                 )
-                prompt = f"今天是 {now.strftime('%Y-%m-%d')}。你是麦肯锡顾问。针对 {target}现价 {price}。请给出入场、止损(SL)及 3 级止盈(TP)建议。基于 2026 环境。"
+                prompt = f"今天是 {now.strftime('%Y-%m-%d')}。你是麦肯锡顾问。针对 {target}现价 {price}。请结合实时情报简短给出入场、止损(SL)及 3 级止盈(TP)建议。基于 2026 环境。"
                 
                 col_left, col_right = st.columns(2)
                 
@@ -155,18 +154,22 @@ if df is not None:
                         st.markdown(f'<div class="report-card">{r_c.choices[0].message.content}</div>', unsafe_allow_html=True)
                     except Exception as e: st.error(f"Claude 响应中断: {e}")
 
-                # Gemini 3.0 调用 (含容错处理)
+                # 修复核心：使用 OpenRouter 确切支持的 Gemini 标识符
                 with col_right:
-                    st.markdown("### ⚡ Gemini 3.0 (进取派)")
+                    st.markdown("### ⚡ Gemini 进取派 (最新量化模型)")
                     try:
-                        r_g = client.chat.completions.create(model="google/gemini-3-flash", messages=[{"role": "user", "content": prompt}])
+                        # 换用绝对稳定的 Gemini 2.0 Flash 最新接口
+                        r_g = client.chat.completions.create(model="google/gemini-2.0-flash-001", messages=[{"role": "user", "content": prompt}])
                         st.markdown(f'<div class="report-card">{r_g.choices[0].message.content}</div>', unsafe_allow_html=True)
                     except Exception as e:
-                        st.warning("Gemini 3.0 接口波动，正在尝试备选路径...")
+                        st.warning("首选接口波动，正在降级至备用通道...")
                         try:
-                            r_g_alt = client.chat.completions.create(model="google/gemini-pro-1.5", messages=[{"role": "user", "content": prompt}])
+                            # 备用方案：使用规范的 1.5-pro 命名
+                            r_g_alt = client.chat.completions.create(model="google/gemini-1.5-pro", messages=[{"role": "user", "content": prompt}])
                             st.markdown(f'<div class="report-card">{r_g_alt.choices[0].message.content}</div>', unsafe_allow_html=True)
-                        except: st.error("AI 引擎暂时过载，请检查 OpenRouter 余额或 Key。")
+                        except Exception as inner_e: 
+                            # 如果全挂了，直接把 OpenRouter 的报错打印出来，拒绝盲猜
+                            st.error(f"OpenRouter 拒绝了请求。详细错误码: {str(inner_e)}")
                 
                 # WhatsApp 推送
                 if wa_num and wa_key:
