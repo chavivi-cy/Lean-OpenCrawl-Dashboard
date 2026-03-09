@@ -25,8 +25,6 @@ st.markdown("""
     .summary-dashboard { background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 20px; border-radius: 12px; border: 1px solid #00d1ff; margin-bottom: 20px; }
     .news-box { background-color: #1c1c1e; padding: 12px; border-radius: 8px; border-left: 4px solid #3a3a3c; margin-bottom: 10px; color: #ffffff; }
     .report-card { background: #1c1c1e; padding: 25px; border-radius: 12px; border: 1px solid #3a3a3c; margin-top: 15px; color: #ffffff; line-height: 1.6; }
-    /* 高亮置信度与时间标签 */
-    .quant-badge { background-color: #00d1ff; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.9em; margin-right: 5px;}
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,7 +54,7 @@ def fetch_twelvedata_feed(symbol, api_key):
             df = pd.DataFrame(res['values'])
             df['datetime'] = pd.to_datetime(df['datetime'])
             df.set_index('datetime', inplace=True)
-            df = df.astype(float).iloc[::-1] # 正序排列
+            df = df.astype(float).iloc[::-1] 
             df.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close'}, inplace=True)
             df = compute_metrics(df)
             price = df['Close'].iloc[-1]
@@ -121,7 +119,6 @@ else:
         c1.metric("实时现价", f"${price:,.2f}")
         c2.metric("当日波动", f"{change:+.2f}%")
         
-        # 提取关键量化指标供 AI 使用
         atr_val = df['ATR'].iloc[-1] if not np.isnan(df['ATR'].iloc[-1]) else 0
         ma20_val = df['MA20'].iloc[-1] if not np.isnan(df['MA20'].iloc[-1]) else price
         
@@ -149,24 +146,24 @@ else:
         if st.button("🚀 启动全球策略共识分析 (Cross-Model PK)"):
             if not or_key: st.error("请填入 OpenRouter Key")
             else:
-                with st.spinner("正在提取 ATR 与 MA20 测算置信度与持仓时间..."):
+                with st.spinner("正在提取盘口流动性与 ATR，推演精确狙击时段..."):
                     client = OpenAI(
                         base_url="https://openrouter.ai/api/v1", 
                         api_key=or_key,
                         default_headers={"HTTP-Referer": "https://lean-quantum-pro.streamlit.app", "X-Title": "LEAN Quantum Terminal"}
                     )
                     
-                    # 核心指令重构：强迫 AI 具备量化思维
-                    news_str = ' | '.join([n['title'] for n in news[:2]]) if news else '暂无重磅新闻'
+                    # 核弹级更新：强制注入时区与盘口解析纪律
+                    news_str = ' | '.join([n['title'] for n in news[:2]]) if news else '暂无重大宏观数据'
                     prompt = f"""
-                    今天是 {now.strftime('%Y-%m-%d')}。你是麦肯锡量化策略顾问。针对 {td_symbol}，现价 {price:.2f}。
+                    当前绝对时间是：{now.strftime('%Y-%m-%d %H:%M')}。你是麦肯锡量化策略顾问。针对 {td_symbol}，现价 {price:.2f}。
                     [系统数据注入] 当前15分钟级别 MA20为 {ma20_val:.2f}，ATR波动率为 {atr_val:.2f}。实时新闻情绪：{news_str}。
                     
                     请严格按照以下结构输出 150 字内的实战简报（基于 2026 环境）：
                     
                     **[量化风控评估]**
-                    - 🎯 **策略置信度**：结合技术面(价格与MA20关系)与基本面，给出一个具体胜率预估(如 65%, 85%)。
-                    - ⏳ **预期持仓时段**：基于当前 ATR 算出的到达 TP1 所需的大致时间(如 4-8小时, 1-2天)。
+                    - 🎯 **策略置信度**：结合技术面与基本面，给出一个具体胜率预估(如 65%, 85%)。
+                    - ⏳ **盘口狙击时段**：【严禁输出模糊的"X-X小时"】！你必须根据给定的当前绝对时间，结合外汇/美股的流动性规律（亚盘干涸、欧盘起势、美盘爆发），明确指出价格最有可能在哪个具体交易盘口触及 TP1。例如："预计在今日伦敦盘与纽约盘交接期（约3-4小时后）突破" 或 "当前处于亚盘尾声流动性不足，预计推迟至美盘早盘发力"。
                     
                     **[执行矩阵]**
                     - 入场建议：...
@@ -196,7 +193,7 @@ else:
                                 st.error(f"OpenRouter 拒绝请求。详细错误码: {str(inner_e)}")
                     
                     if wa_num and wa_key:
-                        push_whatsapp(wa_num, wa_key, f"LEAN 预警: {td_symbol} 触发共识分析。建议头寸: {pos_size:,.0f}。请回终端查看策略置信度与持仓时段。")
+                        push_whatsapp(wa_num, wa_key, f"LEAN 预警: {td_symbol} 触发共识分析。建议头寸: {pos_size:,.0f}。请回终端查看盘口狙击时段。")
                         st.toast("✅ 预警已同步至 WhatsApp")
     else:
         st.error("❌ 数据提取失败。请确认 Twelve Data API Key 是否正确，或网络是否通畅。")
